@@ -26,3 +26,11 @@
 *.exe
 *.out
 *.app
+
+# Build dirs (add your own)
+build/
+cmake/
+
+# etc
+.ycm_extra_conf.pyc
+
