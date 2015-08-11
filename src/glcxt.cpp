@@ -24,13 +24,27 @@ createWindow(int width, int height, std::string title) -> GLFWwindow*
     return glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 }
 
+static GLsizei elec = 3;
+
+auto static selectElements() -> void;
+
 static auto
 keyCallbackFunc(GLFWwindow *window, int key, int scancode, int action, int mods) -> void
 {
+    if (action == GLFW_PRESS) return;
+
     switch (key) {
         case GLFW_KEY_Q:
         case GLFW_KEY_ESCAPE:
             glfwSetWindowShouldClose(window, GL_TRUE);
+            break;
+        case GLFW_KEY_SPACE:
+            if (elec == 3) {
+                elec = 6;
+            } else {
+                elec = 3;
+            }
+            selectElements();
             break;
     }
 }
@@ -75,7 +89,7 @@ GLfloat vertices[] = {
     -0.5f, -0.5f, 1.0f, 0.0f, 0.0f,
      0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
      0.0f,  0.5f, 0.0f, 0.0f, 1.0f,
-     0.5f,  0.5f, 0.0f, 0.0f, 0.0f,
+     0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
     -0.5f,  0.5f, 1.0f, 1.0f, 0.0f
 };
 
@@ -85,13 +99,11 @@ GLuint tri_elements[] = {
 
 GLuint sqr_elements[] = {
     0, 1, 3,
-    1, 3, 4
+    0, 3, 4
 };
 
-static GLsizei elec = 3;
-
 auto static
-selectElements()
+selectElements() -> void
 {
     switch (elec) {
         case 6:
