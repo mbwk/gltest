@@ -5,12 +5,14 @@
 #include <iostream>
 #include <string>
 #include <thread>
-#include <cmath>
+#include <glm/glm.hpp>
 
 #include "glcxt.hpp"
 #include "myshaders.hpp"
 
 namespace mbwk {
+
+static int preferredWidth = 800, preferredHeight = 600;
 
 static auto
 createWindow(int width, int height, std::string title) -> GLFWwindow*
@@ -21,10 +23,52 @@ createWindow(int width, int height, std::string title) -> GLFWwindow*
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 
+    preferredWidth = width;
+    preferredHeight = height;
+
     return glfwCreateWindow(width, height, title.c_str(), nullptr, nullptr);
 }
 
 static GLsizei elec = 3;
+static float alphamod = 1.f;
+static bool fullscreen = false;
+
+static void
+fbSizeCallback(GLFWwindow *window, int width, int height)
+{
+    auto prevGlCxt = glfwGetCurrentContext();
+    glfwMakeContextCurrent(window);
+    glViewport(0, 0, width, height);
+    glfwMakeContextCurrent(prevGlCxt);
+}
+
+static GLFWmonitor*
+getMonitor(GLFWwindow *window)
+{
+    auto monitor = glfwGetWindowMonitor(window);
+    if (!monitor) {
+        monitor = glfwGetPrimaryMonitor();
+    }
+    return monitor;
+}
+
+static void
+toggleFullScreen(GLFWwindow *window)
+{
+    if (fullscreen) {
+        auto vidmode = glfwGetVideoMode(getMonitor(window));
+        int halfMonWidth = vidmode->width / 2, halfMonHeight = vidmode->height / 2,
+            halfWinWidth = preferredWidth / 2, halfWinHeight = preferredHeight / 2;
+        glfwSetWindowPos(window, halfMonWidth - halfWinWidth, halfMonHeight - halfWinHeight);
+        glfwSetWindowSize(window, preferredWidth, preferredHeight);
+    } else {
+        std::cerr << "setting size from vidmode\n";
+        auto vidmode = glfwGetVideoMode(getMonitor(window));
+        glfwSetWindowPos(window, 0, 0);
+        glfwSetWindowSize(window, vidmode->width, vidmode->height);
+    }
+    fullscreen = !fullscreen;
+}
 
 auto static selectElements() -> void;
 
@@ -33,9 +77,12 @@ keyCallbackFunc(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     if (action == GLFW_PRESS) return;
 
+    std::cout << "キー「" << key << "」を押した　";
+
     switch (key) {
         case GLFW_KEY_Q:
         case GLFW_KEY_ESCAPE:
+            std::cout << "（）";
             glfwSetWindowShouldClose(window, GL_TRUE);
             break;
         case GLFW_KEY_SPACE:
@@ -46,7 +93,18 @@ keyCallbackFunc(GLFWwindow *window, int key, int scancode, int action, int mods)
             }
             selectElements();
             break;
+        case GLFW_KEY_T:
+            if (alphamod > 0.5f) {
+                alphamod = 0.f;
+            } else {
+                alphamod = 1.f;
+            }
+            break;
+        case GLFW_KEY_F:
+            toggleFullScreen(window);
+            break;
     }
+    std::cout << '\n';
 }
 
 GlContext::GlContext()
@@ -127,6 +185,7 @@ mainWindow() -> void
     glewInit();
 
     glfwSetKeyCallback(mainWindow, keyCallbackFunc);
+    glfwSetFramebufferSizeCallback(mainWindow, fbSizeCallback);
 
     GLuint vbo, vao, ebo, tex;
 
@@ -161,14 +220,15 @@ mainWindow() -> void
 
     auto t_start = std::chrono::high_resolution_clock::now();
 
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
     while (!glfwWindowShouldClose(mainWindow)) {
         auto t_now = std::chrono::high_resolution_clock::now();
         float time = std::chrono::duration_cast<std::chrono::duration<float>>(t_now - t_start).count();
-        float alval = (std::sin(time * 4.0f) + 1.0f) / 2.0f;
+        float alval =  1.0 - (alphamod * (std::sin(time * 4.0f) + 1.0f) / 2.0f);
 
         glUniform1f(unialpha, alval);
 
-        glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         glDrawElements(GL_TRIANGLES, elec, GL_UNSIGNED_INT, 0);
